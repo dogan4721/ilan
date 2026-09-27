@@ -1,0 +1,153 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile stored in users collection",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "role": { "type": "string", "enum": ["user", "realtor", "admin"] },
+        "companyName": { "type": "string", "maxLength": 120 },
+        "authorizedDocNo": { "type": "string", "maxLength": 50 },
+        "address": { "type": "string", "maxLength": 200 },
+        "verifiedPhone": { "type": "boolean" },
+        "verifiedEmail": { "type": "boolean" },
+        "verifiedIdentity": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "avatarUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Listing": {
+      "title": "Listing",
+      "description": "Classified or real estate listing in Turgutlu",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 3000 },
+        "price": { "type": "number" },
+        "categoryId": { "type": "string", "maxLength": 50 },
+        "subcategory": { "type": "string", "maxLength": 50 },
+        "listingType": { "type": "string", "maxLength": 30 },
+        "city": { "type": "string", "maxLength": 50 },
+        "district": { "type": "string", "maxLength": 50 },
+        "neighborhood": { "type": "string", "maxLength": 60 },
+        "street": { "type": "string", "maxLength": 100 },
+        "images": { "type": "array" },
+        "specs": { "type": "object" },
+        "sellerId": { "type": "string", "maxLength": 128 },
+        "sellerName": { "type": "string", "maxLength": 100 },
+        "sellerType": { "type": "string", "maxLength": 30 },
+        "sellerPhone": { "type": "string", "maxLength": 30 },
+        "sellerAvatar": { "type": "string", "maxLength": 500 },
+        "sellerRating": { "type": "number" },
+        "isVerifiedSeller": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "viewCount": { "type": "number" },
+        "favoriteCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "passive", "pending", "sold"] },
+        "isFeatured": { "type": "boolean" },
+        "isDoping": { "type": "boolean" }
+      },
+      "required": ["id", "title", "price", "categoryId", "sellerId", "neighborhood", "status"]
+    },
+    "Offer": {
+      "title": "Offer",
+      "description": "Bargaining offer on a listing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "listingId": { "type": "string", "maxLength": 128 },
+        "listingTitle": { "type": "string", "maxLength": 150 },
+        "listingPrice": { "type": "number" },
+        "buyerId": { "type": "string", "maxLength": 128 },
+        "buyerName": { "type": "string", "maxLength": 100 },
+        "sellerId": { "type": "string", "maxLength": 128 },
+        "offeredPrice": { "type": "number" },
+        "counterPrice": { "type": "number" },
+        "message": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected", "countered"] }
+      },
+      "required": ["id", "listingId", "buyerId", "sellerId", "offeredPrice", "status"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct chat between buyer and seller",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "listingId": { "type": "string", "maxLength": 128 },
+        "listingTitle": { "type": "string", "maxLength": 150 },
+        "listingPrice": { "type": "number" },
+        "buyerId": { "type": "string", "maxLength": 128 },
+        "buyerName": { "type": "string", "maxLength": 100 },
+        "sellerId": { "type": "string", "maxLength": 128 },
+        "sellerName": { "type": "string", "maxLength": 100 },
+        "lastMessage": { "type": "string", "maxLength": 500 },
+        "lastMessageTime": { "type": "string", "maxLength": 50 },
+        "unreadCount": { "type": "number" }
+      },
+      "required": ["id", "listingId", "buyerId", "sellerId"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Individual chat message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128 },
+        "text": { "type": "string", "maxLength": 1000 },
+        "timestamp": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "senderId", "text", "timestamp"]
+    },
+    "Complaint": {
+      "title": "Complaint",
+      "description": "User reported listing complaint",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "listingId": { "type": "string", "maxLength": 128 },
+        "listingTitle": { "type": "string", "maxLength": 150 },
+        "reporterName": { "type": "string", "maxLength": 100 },
+        "reason": { "type": "string", "maxLength": 100 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "dismissed", "listing_removed"] }
+      },
+      "required": ["id", "listingId", "reason", "details", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profile and account details"
+    },
+    "/listings/{listingId}": {
+      "schema": "Listing",
+      "description": "Stores all marketplace and real estate listings"
+    },
+    "/offers/{offerId}": {
+      "schema": "Offer",
+      "description": "Stores bargaining offers between buyers and sellers"
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Stores conversations between users"
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Stores messages within a conversation"
+    },
+    "/complaints/{complaintId}": {
+      "schema": "Complaint",
+      "description": "Stores reports and complaints about listings"
+    }
+  }
+}

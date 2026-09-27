@@ -1,0 +1,196 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Catch-All Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Bootstrapped Admin Check via collection or designated admin email
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email != null && request.auth.token.email == 'doganb472111@gmail.com')
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // 3. Validation Helpers
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.role in ['user', 'realtor', 'admin'];
+    }
+
+    function isValidListing(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+             data.description is string && data.description.size() <= 3500 &&
+             data.price is number && data.price >= 0 &&
+             data.categoryId is string && data.categoryId.size() <= 50 &&
+             data.sellerId is string && data.sellerId.size() <= 128 &&
+             data.neighborhood is string && data.neighborhood.size() <= 60 &&
+             data.status in ['active', 'passive', 'pending', 'sold'];
+    }
+
+    function isValidOffer(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.listingId is string && data.listingId.size() <= 128 &&
+             data.buyerId is string && data.buyerId.size() <= 128 &&
+             data.sellerId is string && data.sellerId.size() <= 128 &&
+             data.offeredPrice is number && data.offeredPrice > 0 &&
+             data.status in ['pending', 'accepted', 'rejected', 'countered'];
+    }
+
+    function isValidConversation(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.listingId is string && data.listingId.size() <= 128 &&
+             data.buyerId is string && data.buyerId.size() <= 128 &&
+             data.sellerId is string && data.sellerId.size() <= 128;
+    }
+
+    function isValidMessage(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.senderId is string && data.senderId.size() <= 128 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 1000;
+    }
+
+    function isValidComplaint(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.listingId is string && data.listingId.size() <= 128 &&
+             data.reason is string && data.reason.size() <= 100 &&
+             data.details is string && data.details.size() <= 1000 &&
+             data.status in ['pending', 'reviewed', 'dismissed', 'listing_removed'];
+    }
+
+    // 4. USERS Collection
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().role in ['user', 'realtor'];
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(incoming());
+      allow delete: if isAdmin();
+
+      // User's private Favorites subcollection
+      match /favorites/{listingId} {
+        allow read, write: if isOwner(userId) && isValidId(listingId);
+      }
+
+      // User's private Notifications subcollection
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId) && isValidId(notificationId);
+      }
+    }
+
+    // 5. LISTINGS Collection
+    match /listings/{listingId} {
+      // Public can read active listings; owner and admin can read any
+      allow get: if isValidId(listingId);
+      allow list: if true;
+      allow create: if isSignedIn() && isValidId(listingId) &&
+                       isValidListing(incoming()) &&
+                       (incoming().sellerId == request.auth.uid || isAdmin());
+      allow update: if isValidId(listingId) && (
+                       (isSignedIn() && existing().sellerId == request.auth.uid && isValidListing(incoming())) ||
+                       isAdmin()
+                     );
+      allow delete: if isValidId(listingId) && (
+                       (isSignedIn() && existing().sellerId == request.auth.uid) ||
+                       isAdmin()
+                     );
+    }
+
+    // 6. OFFERS Collection
+    match /offers/{offerId} {
+      allow get: if isValidId(offerId) && isSignedIn() &&
+                    (request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.sellerId || isAdmin());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(offerId) &&
+                       isValidOffer(incoming()) &&
+                       (incoming().buyerId == request.auth.uid || isAdmin());
+      allow update: if isValidId(offerId) && isSignedIn() && (
+                       request.auth.uid in [existing().buyerId, existing().sellerId] || isAdmin()
+                     ) && isValidOffer(incoming());
+      allow delete: if isValidId(offerId) && (
+                       (isSignedIn() && request.auth.uid in [existing().buyerId, existing().sellerId]) ||
+                       isAdmin()
+                     );
+    }
+
+    // 7. CONVERSATIONS Collection & Messages Subcollection
+    match /conversations/{conversationId} {
+      allow get: if isValidId(conversationId) && isSignedIn() &&
+                    (request.auth.uid in [resource.data.buyerId, resource.data.sellerId] || isAdmin());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(conversationId) &&
+                       isValidConversation(incoming()) &&
+                       (incoming().buyerId == request.auth.uid || incoming().sellerId == request.auth.uid || isAdmin());
+      allow update: if isValidId(conversationId) && isSignedIn() &&
+                       (request.auth.uid in [existing().buyerId, existing().sellerId] || isAdmin());
+      allow delete: if isValidId(conversationId) && (
+                       (isSignedIn() && request.auth.uid in [existing().buyerId, existing().sellerId]) ||
+                       isAdmin()
+                     );
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid ||
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid ||
+          isAdmin()
+        );
+        allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming()) &&
+                         (incoming().senderId == request.auth.uid || isAdmin());
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // 8. COMPLAINTS Collection
+    match /complaints/{complaintId} {
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn() && isValidId(complaintId) && isValidComplaint(incoming());
+      allow update, delete: if isAdmin();
+    }
+
+    // 9. PAYMENTS Collection
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(paymentId) && (incoming().userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // 10. CATEGORIES Collection
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 11. ADMINS Collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

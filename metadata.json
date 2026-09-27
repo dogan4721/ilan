@@ -1,0 +1,6 @@
+{
+  "name": "TurgutluPazar - Turgutlu Emlak ve Yerel Alım Satım",
+  "description": "Manisa Turgutlu bölgesine özel profesyonel emlak, vasıta, tarım ve yerel alım-satım platformu. Güvenli ticaret, anlık mesajlaşma ve teklif sistemi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
